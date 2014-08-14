@@ -42,8 +42,7 @@ RUN cd /opt/rpi; git clone https://github.com/jameskbride/cmake-hello-world.git;
 RUN cd /opt/rpi/cmake-hello-world/build; cmake -D CMAKE_TOOLCHAIN_FILE=/opt/rpi/pi.cmake ../; make
 
 # Also include sample opencv build script
-RUN mkdir -p /opt/opencv
-ADD build.opencv /opt/opencv/build.opencv
+ADD build.opencv /root/build.opencv
 
 # Exposes
 EXPOSE 22
