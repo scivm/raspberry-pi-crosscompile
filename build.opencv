@@ -1,0 +1,106 @@
+# To use:
+# Cloan the opencv repository and then set the tag you want to compile against
+# For example:
+#   git clone https://github.com/Itseez/opencv
+#   cd opencv
+#   git checkout 2.4.9
+#   cd ..
+#
+echo "COMMAND   : build.pi - cross-compile OpenCV for RaspberryPi"
+
+if [ ! -e release.pi ]; then mkdir -p release.pi; fi
+
+pushd release.pi > /dev/null
+if [ -e CMakeFiles ] ; then
+  echo "STATUS  : removing existing makefiles"
+  rm -rf CMakeCache.txt CMakeFiles CMakeFiles.txt cmake_install.cmake CPackConfig.cmake CPackSourceConfig.cmake
+fi
+
+echo "COMMAND   : cmake -DCMAKE_TOOLCHAIN_FILE=/opt/rpi/pi.cmake ..."
+cmake \
+  -DCMAKE_TOOLCHAIN_FILE=/opt/rpi/pi.cmake \
+  -D BUILD_EXAMPLES=OFF \
+  -D BUILD_NEW_PYTHON_SUPPORT=OFF \
+  -D BUILD_TESTS=OFF \
+  -D INSTALL_C_EXAMPLES=OFF \
+  -D INSTALL_PYTHON_EXAMPLES=OFF \
+  -D WITH_1394=OFF \
+  -D WITH_CUDA=OFF \
+  -D WITH_EIGEN2=OFF \
+  -D WITH_EIGEN=OFF \
+  -D WITH_FFMPEG=OFF \
+  -D WITH_GSTREAMER=OFF \
+  -D WITH_GTK=OFF \
+  -D WITH_JASPER=OFF \
+  -D WITH_JPEG=ON \
+  -D WITH_OPENEXR=OFF \
+  -D WITH_OPENGL=ON \
+  -D WITH_PNG=ON \
+  -D WITH_PVAPI=OFF \
+  -D WITH_QT=OFF \
+  -D WITH_QT_OPENGL=OFF \
+  -D WITH_TBB=OFF \
+  -D WITH_TIFF=OFF \
+  -D WITH_UNICAP=OFF \
+  -D WITH_V4L=OFF \
+  -D WITH_XINE=OFF \
+  -D BUILD_opencv_nonfree=0 \
+  ..
+#  -D ONLY_CMAKE_FIND_ROOT_PATH=ON \
+if [ $? -ne 0 ]; then echo "ERROR	: cmake failed"; exit -1; fi
+
+echo "COMMAND	: make -j4"
+make -j4
+if [ $? -ne 0 ]; then echo "ERROR	: make failed"; exit -1; fi
+
+popd > /dev/null
+
+echo "STATUS	: creating release.pi/install/opencv.zip"
+rm -rf release.pi/install
+mkdir release.pi/install
+
+zip -r release.pi/install/opencv include/opencv include/opencv2
+
+mkdir release.pi/install/include
+cp -r release.pi/opencv2 release.pi/install/include/
+
+pushd release.pi > /dev/null
+mkdir -p install/share/OpenCV
+cp OpenCVConfig.cmake install/share/OpenCV/OpenCVConfig.cmake
+cp OpenCVConfig-version.cmake install/share/OpenCV/OpenCVConfig-version.cmake
+popd > /dev/null
+
+function package() {
+  pushd $1 > /dev/null
+  shift
+  zip -r $*
+  popd > /dev/null
+}
+
+package release.pi/CMakeFiles/Export ../../../release.pi/install/opencv share
+package release.pi/install ../../release.pi/install/opencv share include
+package release.pi --symlinks ../release.pi/install/opencv lib/*so* lib/libopencv_ts.a -x *nonfree* 
+package modules/calib3d ../../release.pi/install/opencv include
+package modules/contrib ../../release.pi/install/opencv include
+package modules/core ../../release.pi/install/opencv include
+package modules/features2d ../../release.pi/install/opencv include
+package modules/flann ../../release.pi/install/opencv include
+package modules/gpu ../../release.pi/install/opencv include
+package modules/highgui ../../release.pi/install/opencv include
+package modules/imgproc ../../release.pi/install/opencv include
+package modules/legacy ../../release.pi/install/opencv include
+package modules/ml ../../release.pi/install/opencv include
+package modules/objdetect ../../release.pi/install/opencv include
+package modules/ocl ../../release.pi/install/opencv include -x */cl_runtime/* */private/*
+package modules/photo ../../release.pi/install/opencv include
+package modules/stitching ../../release.pi/install/opencv include
+package modules/superres ../../release.pi/install/opencv include
+package modules/ts ../../release.pi/install/opencv include
+package modules/video ../../release.pi/install/opencv include
+package modules/videostab ../../release.pi/install/opencv include
+
+echo "-------------------------------------"
+echo "SUCCESS	: install/opencv.zip created"
+echo "INSTALL	: 1) transfer opencv.zip to Raspberry Pi ~/pi"
+echo "INSTALL	: 2) cd /usr/local"
+echo "INSTALL	: 3) sudo unzip ~/opencv.zip"
